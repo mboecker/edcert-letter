@@ -4,7 +4,7 @@ Hi and welcome on the git page of my crate "edcert".
 
 Edcert is a simple library for certification and authentication of data.
 
-# How Edcert it works
+# How Edcert works
 
 1. You create a master keypair. This will be used to sign the highest certificate.
 2. You create a root certificate. Sign this with the master key.

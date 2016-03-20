@@ -1,8 +1,10 @@
 [![Build Status](https://travis-ci.org/zombiemuffin/edcert.svg?branch=master)](https://travis-ci.org/zombiemuffin/edcert)
 
-Hi and welcome on the git page of my crate "edcert".
+Hi and welcome on the git page of my crate "edcert-letter".
 
 Edcert is a simple library for certification and authentication of data.
+edcert-letter provides a Letter<T> type, which can be used for simple validation
+of content.
 
 # How Edcert works
 

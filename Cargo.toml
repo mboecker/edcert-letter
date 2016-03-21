@@ -1,11 +1,11 @@
 [package]
-name = "edcert-letter"
-version = "0.1.0"
+name = "edcert_letter"
+version = "0.1.1"
 authors = [ "Marvin Böcker <marvin.boecker@udo.edu>" ]
 
 description = "This crate provides an abstraction over Edcert. You can use the Letter<T> type to sign and verify content using Edcert Certificates."
 repository = "https://github.com/zombiemuffin/edcert-letter/"
-documentation = "https://zombiemuffin.github.io/edcert-letter/edcert-letter/"
+documentation = "https://docs.rombie.de/edcert_letter"
 readme = "README.md"
 keywords = ["signature", "ed25519", "cryptography", "security", "edcert"]
 license = "MIT"

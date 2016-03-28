@@ -73,17 +73,17 @@ impl<T: AsRef<[u8]>> Validatable for Letter<T> {
         if sig.is_signed_by_master() {
             use edcert::ed25519;
 
-            let res = ed25519::verify(&bytes, sig.get_hash(), mpk);
+            let res = ed25519::verify(&bytes, sig.hash(), mpk);
 
             match res {
                 true => Ok(()),
                 false => Err("Master signature invalid")
             }
         } else {
-            let parent = sig.get_parent().unwrap();
+            let parent = sig.parent().unwrap();
 
             if parent.is_valid(mpk).is_ok() {
-                if parent.verify(bytes, sig.get_hash()) {
+                if parent.verify(bytes, sig.hash()) {
                     Ok(())
                 }
                 else

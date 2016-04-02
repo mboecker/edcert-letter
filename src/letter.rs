@@ -22,7 +22,8 @@
 
 use edcert::certificate::Certificate;
 use edcert::signature::Signature;
-use edcert::certificate_validator::Validatable;
+use edcert::validator::Validatable;
+use edcert::validator::Validator;
 
 /// Use this type to sign content.
 pub struct Letter<T: AsRef<[u8]>> {
@@ -66,15 +67,13 @@ impl<T: AsRef<[u8]>> Letter<T> {
 }
 
 impl<T: AsRef<[u8]>> Validatable for Letter<T> {
-    fn is_valid(&self, mpk: &[u8]) -> Result<(), &'static str> {
+    fn is_valid<V: Validator>(&self, cv: &V) -> Result<(), &'static str> {
         let sig = &self.signature;
         let bytes = self.content.as_ref();
 
         if sig.is_signed_by_master() {
             use edcert::ed25519;
-
-            let res = ed25519::verify(&bytes, sig.hash(), mpk);
-
+            let res = ed25519::verify(&bytes, sig.hash(), cv.get_master_public_key());
             match res {
                 true => Ok(()),
                 false => Err("Master signature invalid")
@@ -82,7 +81,7 @@ impl<T: AsRef<[u8]>> Validatable for Letter<T> {
         } else {
             let parent = sig.parent().unwrap();
 
-            if parent.is_valid(mpk).is_ok() {
+            if cv.is_valid(parent).is_ok() {
                 if parent.verify(bytes, sig.hash()) {
                     Ok(())
                 }
@@ -110,6 +109,8 @@ impl<T: AsRef<[u8]>> Validatable for Letter<T> {
 #[test]
 fn test_simple() {
     use edcert::ed25519;
+    use edcert::root_validator::RootValidator;
+    use edcert::revoker::NoRevoker;
 
     let (mpk, msk) = ed25519::generate_keypair();
 
@@ -117,17 +118,21 @@ fn test_simple() {
 
     let mut letter = Letter::with_private_key(test_str, &msk);
 
-    assert_eq!(true, letter.is_valid(&mpk).is_ok());
+    let cv = RootValidator::new(&mpk, NoRevoker);
+
+    assert_eq!(true, cv.is_valid(&letter).is_ok());
 
     letter.content = "world hello";
 
-    assert_eq!(false, letter.is_valid(&mpk).is_ok());
+    assert_eq!(false, cv.is_valid(&letter).is_ok());
 }
 
 #[test]
 fn test_certificate() {
     use edcert::ed25519;
     use edcert::meta::Meta;
+    use edcert::root_validator::RootValidator;
+    use edcert::revoker::NoRevoker;
 
     use chrono::Timelike;
     use chrono::UTC;
@@ -148,11 +153,13 @@ fn test_certificate() {
 
     let test_str = "hello world";
 
+    let cv = RootValidator::new(&mpk, NoRevoker);
+
     let mut letter = Letter::with_certificate(test_str, &cert);
 
-    assert_eq!(true, letter.is_valid(&mpk).is_ok());
+    assert_eq!(true, cv.is_valid(&letter).is_ok());
 
     letter.content = "world hello";
 
-    assert_eq!(false, letter.is_valid(&mpk).is_ok());
+    assert_eq!(false, cv.is_valid(&letter).is_ok());
 }

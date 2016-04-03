@@ -101,8 +101,12 @@ impl<T: AsRef<[u8]>> Validatable for Letter<T> {
         false
     }
 
-    fn get_id(&self) -> String {
+    fn get_key_id(&self) -> String {
         panic!();
+    }
+
+    fn get_certificate_id(&self) -> String {
+        "".to_string()
     }
 }
 

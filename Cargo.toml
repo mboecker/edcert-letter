@@ -1,6 +1,6 @@
 [package]
 name = "edcert-letter"
-version = "1.0.2"
+version = "1.0.3"
 authors = [ "Marvin Böcker <marvin.boecker@udo.edu>" ]
 
 description = "This crate provides an abstraction over Edcert. You can use the Letter<T> type to sign and verify content using Edcert Certificates."
@@ -13,4 +13,4 @@ license = "MIT"
 [dependencies]
 time = "^0.1"
 chrono = "^0.2"
-edcert = "^7.0"
+edcert = "^8.0"

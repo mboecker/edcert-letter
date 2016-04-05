@@ -28,17 +28,16 @@ use edcert::validator::Validator;
 /// Use this type to sign content.
 pub struct Letter<T: AsRef<[u8]>> {
     content: T,
-    signature: Signature
+    signature: Signature,
 }
 
 impl<T: AsRef<[u8]>> Letter<T> {
-
     /// This method creates a Letter from its parts: A piece of content (which must be
     /// convertable to a &[u8] (must implement AsRef<[u8]>)) and a Signature.
     pub fn new(content: T, signature: Signature) -> Letter<T> {
         Letter {
             content: content,
-            signature: signature
+            signature: signature,
         }
     }
 
@@ -52,7 +51,8 @@ impl<T: AsRef<[u8]>> Letter<T> {
     /// This method creates a Letter by signing itself with the given certificate. The certificate
     /// must have a private key.
     pub fn with_certificate(content: T, cert: &Certificate) -> Letter<T> {
-        let hash = cert.sign(content.as_ref()).expect("Failed to sign content. Maybe private key missing?");
+        let hash = cert.sign(content.as_ref())
+                       .expect("Failed to sign content. Maybe private key missing?");
         let signature = Signature::with_parent(Box::new(cert.clone()), hash);
         Letter::new(content, signature)
     }
@@ -74,9 +74,10 @@ impl<T: AsRef<[u8]>> Validatable for Letter<T> {
         if sig.is_signed_by_master() {
             use edcert::ed25519;
             let res = ed25519::verify(&bytes, sig.hash(), cv.get_master_public_key());
-            match res {
-                true => Ok(()),
-                false => Err("Master signature invalid")
+            if res {
+                Ok(())
+            } else {
+                Err("Master signature invalid")
             }
         } else {
             let parent = sig.parent().unwrap();
@@ -84,14 +85,10 @@ impl<T: AsRef<[u8]>> Validatable for Letter<T> {
             if cv.is_valid(parent).is_ok() {
                 if parent.verify(bytes, sig.hash()) {
                     Ok(())
-                }
-                else
-                {
+                } else {
                     Err("Invalid signature")
                 }
-            }
-            else
-            {
+            } else {
                 Err("My parent isn't valid.")
             }
         }

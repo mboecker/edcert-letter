@@ -11,6 +11,5 @@ keywords = ["signature", "ed25519", "cryptography", "security", "edcert"]
 license = "MIT"
 
 [dependencies]
-time = "^0.1"
 chrono = "^0.2"
 edcert = "^8.0"

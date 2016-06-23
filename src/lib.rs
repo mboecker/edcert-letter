@@ -22,7 +22,6 @@
 
 extern crate edcert;
 extern crate chrono;
-extern crate time;
 
 pub mod letter;
 pub use letter::Letter;

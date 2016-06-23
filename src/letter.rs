@@ -137,7 +137,7 @@ fn test_certificate() {
 
     use chrono::Timelike;
     use chrono::UTC;
-    use time::Duration;
+    use chrono::Duration;
 
     let (mpk, msk) = ed25519::generate_keypair();
 

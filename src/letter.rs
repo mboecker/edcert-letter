@@ -20,12 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+use std::ops::Deref;
+
 use edcert::certificate::Certificate;
 use edcert::signature::Signature;
 use edcert::validator::Validatable;
 use edcert::validator::Validator;
 
 /// Use this type to sign content.
+#[derive(PartialEq, Debug)]
 pub struct Letter<T: AsRef<[u8]>> {
     content: T,
     signature: Signature,
@@ -107,6 +110,14 @@ impl<T: AsRef<[u8]>> Validatable for Letter<T> {
     }
 }
 
+impl<T: AsRef<[u8]>> Deref for Letter<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.get()
+    }
+}
+
 #[test]
 fn test_simple() {
     use edcert::ed25519;
@@ -163,4 +174,16 @@ fn test_certificate() {
     letter.content = "world hello";
 
     assert_eq!(false, cv.is_valid(&letter).is_ok());
+}
+
+#[test]
+fn test_deref() {
+    use edcert::ed25519;
+
+    let (_, msk) = ed25519::generate_keypair();
+    let test_str = "hello world";
+    let letter = Letter::with_private_key(test_str, &msk);
+
+    let deref_str: &str = *letter;
+    assert_eq!(deref_str, test_str);
 }

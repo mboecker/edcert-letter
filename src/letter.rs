@@ -23,18 +23,23 @@
 use std::ops::Deref;
 
 use edcert::certificate::Certificate;
+use edcert::fingerprint::Fingerprint;
 use edcert::signature::Signature;
 use edcert::validator::Validatable;
 use edcert::validator::Validator;
+use edcert::validator::ValidationError;
+use edcert::revoker::RevokeError;
+use edcert::revoker::Revoker;
+use edcert::revoker::Revokable;
 
 /// Use this type to sign content.
 #[derive(PartialEq, Debug)]
-pub struct Letter<T: AsRef<[u8]>> {
+pub struct Letter<T: Fingerprint> {
     content: T,
     signature: Signature,
 }
 
-impl<T: AsRef<[u8]>> Letter<T> {
+impl<T: Fingerprint> Letter<T> {
     /// This method creates a Letter from its parts: A piece of content (which must be
     /// convertable to a &[u8] (must implement AsRef<[u8]>)) and a Signature.
     pub fn new(content: T, signature: Signature) -> Letter<T> {
@@ -47,74 +52,77 @@ impl<T: AsRef<[u8]>> Letter<T> {
     /// This method creates a Letter by signing itself with the given private key
     pub fn with_private_key(content: T, private_key: &[u8]) -> Letter<T> {
         use edcert::ed25519;
-        let signature = Signature::new(ed25519::sign(content.as_ref(), &private_key));
+        let signature = Signature::new(ed25519::sign(&content.fingerprint(), private_key));
         Letter::new(content, signature)
     }
 
     /// This method creates a Letter by signing itself with the given certificate. The certificate
     /// must have a private key.
-    pub fn with_certificate(content: T, cert: &Certificate) -> Letter<T> {
-        let hash = cert.sign(content.as_ref())
-                       .expect("Failed to sign content. Maybe private key missing?");
-        let signature = Signature::with_parent(Box::new(cert.clone()), hash);
-        Letter::new(content, signature)
+    pub fn with_certificate(content: T, cert: &Certificate) -> Result<Letter<T>, ()> {
+        // This next call can fail, if the given certificate has no private key.
+        let res = cert.sign(&content.fingerprint());
+
+        match res {
+            Some(hash) => {
+                let signature = Signature::with_parent(Box::new(cert.clone()), hash);
+                Ok(Letter::new(content, signature))
+            },
+            None => {
+                Err(())
+            }
+        }
     }
 
+    /// This method returns a reference to the contained object.
     pub fn get(&self) -> &T {
         &self.content
     }
-
-    pub fn get_mut(&mut self) -> &mut T {
-        &mut self.content
-    }
 }
 
-impl<T: AsRef<[u8]>> Validatable for Letter<T> {
-    fn is_valid<V: Validator>(&self, cv: &V) -> Result<(), &'static str> {
+impl<T: Fingerprint> Validatable for Letter<T> {
+    fn self_validate<V: Validator>(&self, cv: &V) -> Result<(), ValidationError> {
         let sig = &self.signature;
-        let bytes = self.content.as_ref();
+        let bytes = self.content.fingerprint();
 
         if sig.is_signed_by_master() {
-            use edcert::ed25519;
-            let res = ed25519::verify(&bytes, sig.hash(), cv.get_master_public_key());
-            if res {
+            if cv.is_signature_valid(&bytes, sig.hash()) {
                 Ok(())
             } else {
-                Err("Master signature invalid")
+                Err(ValidationError::SignatureInvalid)
             }
         } else {
             let parent = sig.parent().unwrap();
 
             if cv.is_valid(parent).is_ok() {
-                if parent.verify(bytes, sig.hash()) {
+                if parent.verify(&bytes, sig.hash()) {
                     Ok(())
                 } else {
-                    Err("Invalid signature")
+                    Err(ValidationError::SignatureInvalid)
                 }
             } else {
-                Err("My parent isn't valid.")
+                Err(ValidationError::ParentInvalid)
             }
         }
     }
+}
 
-    fn is_revokable(&self) -> bool {
-        false
-    }
-
-    fn get_key_id(&self) -> String {
-        panic!();
-    }
-
-    fn get_certificate_id(&self) -> String {
-        "".to_string()
+impl<T: Fingerprint> Fingerprint for Letter<T> {
+    fn fingerprint(&self) -> Vec<u8> {
+        self.content.fingerprint()
     }
 }
 
-impl<T: AsRef<[u8]>> Deref for Letter<T> {
+impl<T: Fingerprint> Deref for Letter<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
         self.get()
+    }
+}
+
+impl<T: Fingerprint> Revokable for Letter<T> {
+    fn self_check_revoked<R: Revoker>(&self, _: &R) -> Result<(), RevokeError> {
+        Ok(())
     }
 }
 
@@ -167,7 +175,7 @@ fn test_certificate() {
 
     let cv = RootValidator::new(&mpk, NoRevoker);
 
-    let mut letter = Letter::with_certificate(test_str, &cert);
+    let mut letter = Letter::with_certificate(test_str, &cert).expect("This fails only if the Certificate has no private key.");
 
     assert_eq!(true, cv.is_valid(&letter).is_ok());
 

@@ -20,8 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! This crate contains the type Letter<T>. It is supposed to be a container for signed data.
+//! You can create signed data either from a ed25519 key or using a `Certificate`.
+//! 
+//! For example, when you generate a ephermeral keypair, you sign your public key by creating a
+//! Letter<PublicKeyType> and send that over the network. The other end can then validate the
+//! Letter and knows that you own that certificate, and if the other end trusts that certificate
+//! (for example, by signing your certificate with the master keypair), it knows, that the
+//! sent public key is really yours.
+
+#![deny(missing_docs)]
+
 extern crate edcert;
 extern crate chrono;
 
+/// This module contains the Letter<T> type.
 pub mod letter;
 pub use letter::Letter;
